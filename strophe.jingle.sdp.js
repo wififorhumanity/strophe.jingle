@@ -95,7 +95,7 @@ SDP.prototype.toJingle = function (elem, thecreator) {
     }
     for (i = 0; i < this.media.length; i++) {
         mline = SDPUtil.parse_mline(this.media[i].split('\r\n')[0]);
-        if (!(mline.media == 'audio' || mline.media == 'video')) {
+        if (!(mline.media == 'audio' || mline.media == 'video' || mline.media == 'application')) {
             continue;
         }
         if (SDPUtil.find_line(this.media[i], 'a=ssrc:')) {
@@ -214,7 +214,11 @@ SDP.prototype.toJingle = function (elem, thecreator) {
                 }
             }
             elem.up(); // end of description
-        }
+        }else if(SDPUtil.find_line(this.media[i], 'a=sctpmap:').length){ //DataChannel
+          elem.c('description', //FIXME: Need actual application
+                 {xmlns: 'urn:xmpp:example'});
+          elem.up();          
+        } 
 
         // map ice-ufrag/pwd, dtls fingerprint, candidates
         this.TransportToJingle(i, elem);
@@ -271,6 +275,13 @@ SDP.prototype.TransportToJingle = function (mediaindex, elem) {
             });
         }
     }
+	var sctpmaps = SDPUtil.find_lines(this.media[mediaindex], 'a=sctpmap:', this.session);
+	sctpmaps.forEach(function(line){
+		var attr = SDPUtil.parse_sctpmap(line);
+        attr.xmlns = 'urn:xmpp:jingle:transports:dtls-sctp:1';
+        elem.c('sctpmap', attr);
+       elem.up();
+	});
     elem.up(); // end of transport
 }
 
@@ -356,8 +367,14 @@ SDP.prototype.fromJingle = function (jingle) {
     }
 
     this.session = this.raw;
-    jingle.find('>content').each(function () {
-        var m = self.jingle2media($(this));
+    jingle.find('>content').each(function () {		
+        var transport = $(this).find('transport'),
+			m;
+		if($(transport).find('>sctpmap').length){
+          m = self.jingle2sctp($(this));
+        }else {
+        	m = self.jingle2media($(this));
+		}
         self.media.push(m);
     });
 
@@ -372,6 +389,43 @@ SDP.prototype.fromJingle = function (jingle) {
     this.raw = this.session + this.media.join('');
 };
 
+SDP.prototype.jingle2sctp = function(content) {
+  var media = '',
+      desc = content.find('description'),
+      self = this,
+      tmp;
+  //FIXME: Needed? // +$(content.find('transport>candidate')[0]).attr('port')+
+
+  media +='m=application 1 DTLS/SCTP';
+  
+  content.find('transport>sctpmap').each(function() {
+        media += ' '+this.getAttribute('number');
+  });
+  media+='\r\n';
+  media += 'c=IN IP4 0.0.0.0\r\n';
+  content.find('transport>sctpmap').each(function() {
+        media += SDPUtil.build_sctpmap(this);
+  });
+  if (content.find('transport').length) {
+        if (content.find('transport').attr('ufrag')) {
+            media += SDPUtil.build_iceufrag(content.find('transport').attr('ufrag')) + '\r\n';
+        }
+        if (content.find('transport').attr('pwd')) {
+            media += 'a=ice-pwd:' + content.find('transport').attr('pwd') + '\r\n';
+        }
+        tmp = content.find('transport>fingerprint');
+        if (tmp.length) {
+            media += 'a=fingerprint:' + tmp.attr('hash');
+            media += ' ' + tmp.text();
+            media += '\r\n';
+        }
+  }
+  content.find('transport>candidate').each(function() {
+        media += SDPUtil.candidateFromJingle(this);
+        console.log('add candidate');
+  });
+  return media;
+}
 // translate a jingle content element into an an SDP media part
 SDP.prototype.jingle2media = function (content) {
     var media = '',
@@ -552,6 +606,19 @@ SDPUtil = {
         if (el.getAttribute('channels') && el.getAttribute('channels') != '1') {
             line += '/' + el.getAttribute('channels');
         }
+        return line;
+    },
+    parse_sctpmap: function (line) {
+        //Cope with sctpmap
+        var parts = line.substring(line.indexOf(':')+1).split(' '),
+            data = {};
+        data.number = parts.shift();
+        data.protocol = parts.shift();
+        data.streams = parts.shift();
+        return data;
+    },
+    build_sctpmap: function (el) {
+        var line = 'a=sctpmap:' + el.getAttribute('number') + ' ' + el.getAttribute('protocol') + ' ' + el.getAttribute('streams')+"\r\n";
         return line;
     },
     parse_crypto: function (line) {

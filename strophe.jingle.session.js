@@ -22,6 +22,7 @@ function JingleSession(me, sid, connection) {
     this.pc_constraints = null;
     this.ice_config = {};
     this.drip_container = [];
+    this.dataChannels = {};
 
     this.usetrickle = true;
     this.usepranswer = false; // early transport warmup -- mind you, this might fail. depends on webrtc issue 1718
@@ -41,7 +42,7 @@ function JingleSession(me, sid, connection) {
     this.wait = true;
 }
 
-JingleSession.prototype.initiate = function (peerjid, isInitiator) {
+JingleSession.prototype.initiate = function(peerjid, isInitiator, datachannels) {
     var self = this;
     if (this.state !== null) {
         console.error('attempt to initiate on session ' + this.sid +
@@ -63,6 +64,20 @@ JingleSession.prototype.initiate = function (peerjid, isInitiator) {
         console.error(e);
         return;
     }
+    if(datachannels !== undefined){
+      datachannels.forEach(function(channel){
+           try {
+              var dc = self.peerconnection.createDataChannel(channel.name, channel.constraints);
+              dc.onopen = function() {
+                $(document).trigger('datachannelopen.jingle', [self.connection, self.sid, dc]);
+              }
+              self.dataChannels[dc.label] = dc;
+           } catch (e) {
+              console.error('Failed to create Datachannel ' + channel.name, e.message);
+              console.error(e);
+           }
+        });
+    }
     this.hadstuncandidate = false;
     this.hadturncandidate = false;
     this.lasticecandidate = false;
@@ -73,6 +88,13 @@ JingleSession.prototype.initiate = function (peerjid, isInitiator) {
         self.remoteStream = event.stream;
         self.remoteStreams.push(event.stream);
         $(document).trigger('remotestreamadded.jingle', [event, self.sid]);
+    };
+	this.peerconnection.ondatachannel = function(event) {
+        self.dataChannels[event.channel.label] = event.channel;
+        event.channel.onopen = function() {
+                $(document).trigger('datachannelopen.jingle', [self.connection, self.sid, event.channel]);
+        }
+        $(document).trigger('datachanneladded.jingle', [event, self.sid]);
     };
     this.peerconnection.onremovestream = function (event) {
         self.remoteStream = null;

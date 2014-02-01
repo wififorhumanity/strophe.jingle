@@ -22,6 +22,7 @@ Strophe.addConnectionPlugin('jingle', {
             this.connection.disco.addFeature('urn:xmpp:jingle:1');
             this.connection.disco.addFeature('urn:xmpp:jingle:apps:rtp:1');
             this.connection.disco.addFeature('urn:xmpp:jingle:transports:ice-udp:1');
+            this.connection.disco.addFeature('urn:xmpp:jingle:transports:dtls-sctp:1');
             this.connection.disco.addFeature('urn:xmpp:jingle:apps:rtp:audio');
             this.connection.disco.addFeature('urn:xmpp:jingle:apps:rtp:video');
 
@@ -147,8 +148,8 @@ Strophe.addConnectionPlugin('jingle', {
         }
         return true;
     },
-    initiate: function (peerjid, myjid) { // initiate a new jinglesession to peerjid
-        var sess = new JingleSession(myjid || this.connection.jid,
+    initiate: function(peerjid, myjid, datachannels) { // initiate a new jinglesession to peerjid
+        var sess = new JingleSession(myjid,
                                      Math.random().toString(36).substr(2, 12), // random string
                                      this.connection);
         // configure session
@@ -159,7 +160,8 @@ Strophe.addConnectionPlugin('jingle', {
         sess.pc_constraints = this.pc_constraints;
         sess.ice_config = this.ice_config;
 
-        sess.initiate(peerjid, true);
+        sess.initiate(peerjid, true, datachannels);
+        
         this.sessions[sess.sid] = sess;
         this.jid2session[sess.peerjid] = sess;
         sess.sendOffer();
