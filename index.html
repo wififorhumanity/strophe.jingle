@@ -1,0 +1,76 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN"
+          "http://www.w3.org/TR/html4/strict.dtd">
+<html>
+  <head>
+    <meta http-equiv="Content-type" content="text/html;charset=UTF-8">
+    <title>XMPP over WebRTC</title>
+
+    <link rel='stylesheet' href='http://ajax.googleapis.com/ajax/libs/jqueryui/1.7.0/themes/cupertino/jquery-ui.css'>
+    <script src='http://ajax.googleapis.com/ajax/libs/jquery/1.3.2/jquery.js'></script>
+    <script src='http://ajax.googleapis.com/ajax/libs/jqueryui/1.7.2/jquery-ui.js'></script>
+    <script src='strophe.js'></script>
+    <script src='strophe.disco.js'></script>
+    <script src='strophe.jingle.js' charset='utf-8'></script><!-- strophe jingle connection plugin -->
+    <script src='strophe.jingle.session.js' charset='utf-8'></script><!-- strophe jingle connection plugin -->
+    <script src='strophe.jingle.sdp.js' charset='utf-8'></script><!-- sdp library -->
+    <script src='strophe.jingle.adapter.js' charset='utf-8'></script><!-- getusermedia cross browser compat layer -->
+
+    <link rel='stylesheet' href='gab.css'>
+    <script src='gab.js'></script>
+  </head>
+  <body>
+    <h1>XMPP over WebRTC</h1>
+    <h3>Based on <a href="https://github.com/metajack/profxmpp/tree/master/ch06">Chapter 06</a> of <a href="http://professionalxmpp.com/">Professional XMPP.</a></h3>
+
+    <div id='toolbar'>
+      <span class='button' id='new-contact'>add contact...</span> ||
+      <span class='button' id='new-chat'>chat with...</span> ||
+      <span class='button' id='disconnect'>disconnect</span>
+    </div>
+
+    <div id='chat-area'>
+      <ul></ul>
+    </div>
+    
+    <div id='roster-area'>
+      <ul></ul>
+    </div>
+
+
+    <!-- login dialog -->
+    <div id='login_dialog' class='hidden'>
+      <label>JID:</label><input type='text' id='jid'>
+      <label>Password:</label><input type='password' id='password'>
+      <label>Service:</label><input type='text' id='service' value="http://ubuntu:5280/http-bind">
+    </div>
+
+    <!-- contact dialog -->
+    <div id='contact_dialog' class='hidden'>
+      <label>JID:</label><input type='text' id='contact-jid'>
+      <label>Name:</label><input type='text' id='contact-name'>
+    </div>
+
+    <!-- chat dialog -->
+    <div id='chat_dialog' class='hidden'>
+      <label>JID:</label><input type='text' id='chat-jid'>
+    </div>
+
+    <!-- approval dialog -->
+    <div id='approve_dialog' class='hidden'>
+      <p><span id='approve-jid'></span> has requested a subscription
+        to your presence.  Approve or deny?</p>
+    </div>
+    <footer>Portions of this code from `Professional XMPP Programming with JavaScript and jQuery', ISBN: 978-0470540718, copyright John Wiley & Sons, Inc.: year, by author, published under the Wrox imprint are used by permission of John Wiley & Sons, Inc All rights reserved. This book and the Wrox code are available for purchase or download at www.wrox.com. This page uses Google Analytics. You can <a href="http://tools.google.com/dlpage/gaoptout">opt-out</a>. This is used only for information purposes. This page is non-commcercial. </footer>
+    <script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+  ga('create', 'UA-47451776-1', 'sticky-bit.github.io');
+  ga('set', 'anonymizeIp', true);
+  ga('send', 'pageview');
+
+</script>
+  </body>
+</html>
