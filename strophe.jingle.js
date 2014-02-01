@@ -17,7 +17,6 @@ Strophe.addConnectionPlugin('jingle', {
     init: function (conn) {
         this.connection = conn;
         if (this.connection.disco) {
-            console.log("haz disco");
             // http://xmpp.org/extensions/xep-0167.html#support
             // http://xmpp.org/extensions/xep-0176.html#support
             this.connection.disco.addFeature('urn:xmpp:jingle:1');
@@ -77,13 +76,16 @@ Strophe.addConnectionPlugin('jingle', {
             this.connection.send(ack);
             return true;
         }
+        // FIXME: check for a defined action
         this.connection.send(ack);
         // see http://xmpp.org/extensions/xep-0166.html#concepts-session
         switch (action) {
         case 'session-initiate':
             sess = new JingleSession($(iq).attr('to'), $(iq).find('jingle').attr('sid'), this.connection);
             // configure session
-            sess.localStream = this.localStream;
+            if (this.localStream) {
+                sess.localStreams.push(this.localStream);
+            }
             sess.media_constraints = this.media_constraints;
             sess.pc_constraints = this.pc_constraints;
             sess.ice_config = this.ice_config;
@@ -103,6 +105,7 @@ Strophe.addConnectionPlugin('jingle', {
         case 'session-accept':
             sess.setRemoteDescription($(iq).find('>jingle'), 'answer');
             sess.accept();
+            $(document).trigger('callaccepted.jingle', [sess.sid]);
             break;
         case 'session-terminate':
             console.log('terminating...');
@@ -133,6 +136,12 @@ Strophe.addConnectionPlugin('jingle', {
                 $(document).trigger('unmute.jingle', [sess.sid, affected]);
             }
             break;
+        case 'addsource': // FIXME: proprietary
+            sess.addSource($(iq).find('>jingle>content'));
+            break;
+        case 'removesource': // FIXME: proprietary
+            sess.removeSource($(iq).find('>jingle>content'));
+            break;
         default:
             console.warn('jingle action not implemented', action);
             break;
@@ -144,7 +153,9 @@ Strophe.addConnectionPlugin('jingle', {
                                      Math.random().toString(36).substr(2, 12), // random string
                                      this.connection);
         // configure session
-        sess.localStream = this.localStream;
+        if (this.localStream) {
+            sess.localStreams.push(this.localStream);
+        }
         sess.media_constraints = this.media_constraints;
         sess.pc_constraints = this.pc_constraints;
         sess.ice_config = this.ice_config;
@@ -199,6 +210,7 @@ Strophe.addConnectionPlugin('jingle', {
         // validity have to be fetched before creating the peerconnection
         // TODO: implement refresh via updateIce as described in
         //      https://code.google.com/p/webrtc/issues/detail?id=1650
+        var self = this;
         this.connection.sendIQ(
             $iq({type: 'get', to: this.connection.domain})
                 .c('services', {xmlns: 'urn:xmpp:extdisco:1'}).c('service', {host: 'turn.' + this.connection.domain}),
@@ -238,7 +250,7 @@ Strophe.addConnectionPlugin('jingle', {
                         break;
                     }
                 });
-                this.ice_config.iceServers = iceservers;
+                self.ice_config.iceServers = iceservers;
             },
             function (err) {
                 console.warn('getting turn credentials failed', err);
